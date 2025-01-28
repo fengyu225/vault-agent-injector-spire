@@ -1,0 +1,13 @@
+injector:
+  enabled: true
+
+externalVaultAddr: "https://vault.demo:8200"
+
+securityContext:
+  container:
+    seccompProfile:
+      type: "RuntimeDefault"
+    capabilities:
+      drop: ["ALL"]
+    privileged: false
+    allowPrivilegeEscalation: false

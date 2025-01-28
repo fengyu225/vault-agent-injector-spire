@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vault-demo
+  namespace: demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vault-demo
+  template:
+    metadata:
+      labels:
+        app: vault-demo
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "demo-role"
+        vault.hashicorp.com/agent-inject-secret-config: "kv/demo/config"
+        vault.hashicorp.com/tls-skip-verify: "true"
+        vault.hashicorp.com/agent-log-level: "debug"
+        vault.hashicorp.com/agent-pre-populate-only: "true"
+        vault.hashicorp.com/agent-init-first: "true"
+        vault.hashicorp.com/agent-extra-env: |
+          VAULT_ADDR=https://vault.demo:8200
+          VAULT_LOG_LEVEL=debug
+        vault.hashicorp.com/template-static-secret-render-interval: "10"
+    spec:
+      serviceAccountName: vault-auth
+      automountServiceAccountToken: true
+      containers:
+        - name: app
+          image: busybox
+          command: ['sh', '-c', 'while true; do cat /vault/secrets/config 2>/dev/null || echo "Waiting for secret..."; sleep 5; done']
