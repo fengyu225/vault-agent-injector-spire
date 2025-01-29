@@ -1,0 +1,13 @@
+apiVersion: spire.spiffe.io/v1alpha1
+kind: ClusterSPIFFEID
+metadata:
+  name: client-spiffeid
+spec:
+  spiffeIDTemplate: "spiffe://{{ .TrustDomain }}/workload/client"
+  dnsNameTemplates:
+    - "db-client"
+  podSelector:
+    matchLabels:
+      app: client
+      spiffe.io/spire-managed-identity: "true"
+  ttl: 1m

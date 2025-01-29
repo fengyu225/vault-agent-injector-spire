@@ -1,0 +1,10 @@
+injector:
+  enabled: true
+  externalVaultAddr: "https://vault.demo:8200"
+
+  # Configure TLS Skip Verify for testing
+  tlsSkipVerify: true
+
+# Disable the Vault server as we're using external Vault
+vault:
+  enabled: false

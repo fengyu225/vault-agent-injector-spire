@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: client
+  template:
+    metadata:
+      labels:
+        app: client
+        spiffe.io/spire-managed-identity: "true"
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/auth-type: "cert"
+        vault.hashicorp.com/auth-path: "auth/cert"
+        vault.hashicorp.com/client-cert: "/run/spiffe/certs/svid.pem"
+        vault.hashicorp.com/client-key: "/run/spiffe/certs/svid_key.pem"
+        vault.hashicorp.com/ca-cert: "/run/spiffe/certs/svid_bundle.pem"
+        vault.hashicorp.com/role: "app"
+        vault.hashicorp.com/agent-inject-secret-config: "kv/data/app/config"
+        vault.hashicorp.com/agent-init-first: "false"
+        vault.hashicorp.com/service: "https://vault.demo:8200"
+        vault.hashicorp.com/tls-skip-verify: "true"
+        vault.hashicorp.com/agent-init-json-patch: |
+          [
+            {
+              "op": "add",
+              "path": "/volumeMounts/-",
+              "value": {
+                "name": "spiffe-certs",
+                "mountPath": "/run/spiffe/certs"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/securityContext",
+              "value": {
+                "runAsUser": 0,
+                "runAsGroup": 0
+              }
+            }
+          ]
+        vault.hashicorp.com/agent-json-patch: |
+          [
+            {
+              "op": "add",
+              "path": "/volumeMounts/-",
+              "value": {
+                "name": "spiffe-certs",
+                "mountPath": "/run/spiffe/certs"
+              }
+            },
+            {
+              "op": "add",
+              "path": "/securityContext",
+              "value": {
+                "runAsUser": 0,
+                "runAsGroup": 0
+              }
+            }
+          ]
+        vault.hashicorp.com/agent-inject-template-config: |
+          {{- with secret "kv/data/app/config" -}}
+          {{- .Data.data | toJSONPretty -}}
+          {{- end -}}
+    spec:
+      serviceAccountName: client-sa
+      initContainers:
+        - name: spiffe-helper-init
+          image: docker.io/fengyu225/spiffe-helper:v0.0.1
+          args:
+            - -config
+            - /etc/spiffe-helper/helper.conf
+            - -daemon-mode=false
+          volumeMounts:
+            - name: spiffe-helper-config
+              mountPath: /etc/spiffe-helper
+            - name: spire-agent-socket
+              mountPath: /run/spire/agent-sockets
+              readOnly: true
+            - name: spiffe-certs
+              mountPath: /run/spiffe/certs
+      containers:
+        - name: client
+          image: fengyu225/db-client:v0.0.1
+          imagePullPolicy: Always
+#          args:
+#            - --cert-dir=/run/spiffe/certs
+          env:
+            - name: DB_HOST
+              value: "postgres"
+          volumeMounts:
+            - name: spiffe-certs
+              mountPath: /run/spiffe/certs
+        - name: spiffe-helper
+          image: docker.io/fengyu225/spiffe-helper:v0.0.1
+          args:
+            - -config
+            - /etc/spiffe-helper/helper.conf
+          volumeMounts:
+            - name: spiffe-helper-config
+              mountPath: /etc/spiffe-helper
+            - name: spire-agent-socket
+              mountPath: /run/spire/agent-sockets
+              readOnly: true
+            - name: spiffe-certs
+              mountPath: /run/spiffe/certs
+      volumes:
+        - name: spire-agent-socket
+          hostPath:
+            path: /run/spire/agent-sockets
+            type: Directory
+        - name: spiffe-helper-config
+          configMap:
+            name: client-spiffe-helper-config
+        - name: spiffe-certs
+          emptyDir: {}

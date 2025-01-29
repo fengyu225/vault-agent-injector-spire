@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault
+  namespace: app
+spec:
+  type: ExternalName
+  externalName: vault.demo
+  ports:
+    - port: 8200
+      targetPort: 8200
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: vault
+  namespace: app
+subsets:
+  - addresses:
+      - ip: VAULT_IP  # Will be replaced by sed
+    ports:
+      - port: 8200
