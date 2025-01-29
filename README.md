@@ -67,7 +67,31 @@ vault write auth/cert/certs/app \
     display_name="app"
 
 # Create policy
+cat << EOF > certificate-auth/app-policy.hcl
+path "kv/data/app/config" {
+  capabilities = ["read"]
+}
+
+path "kv/data/app/config/*" {
+  capabilities = ["read"]
+}
+
+path "kv/metadata/app/config" {
+  capabilities = ["read", "list"]
+}
+EOF
+
 vault policy write app-policy certificate-auth/app-policy.hcl
+
+# Enable KV secrets engine and add db secrets
+vault secrets enable -path=kv kv-v2
+
+vault kv put kv/app/config \
+    username="app" \
+    password="password" \
+    host="postgres" \
+    port="5432" \
+    database="app-db"
 ```
 
 ### 4. Install Vault Agent Injector
